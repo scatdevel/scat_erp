@@ -11,6 +11,8 @@ import {
 import { Link } from "react-router-dom";
 
 export function SignIn() {
+  const [alertMessage, setAlertMessage] = useState('');
+  const [showAlert, setShowAlert] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -41,6 +43,10 @@ export function SignIn() {
 
     try {
       const response = await loginUser(formData);
+
+
+    setAlertMessage('Login successful!');
+    setShowAlert(true);
 
       console.log(response);
       alert('Login successful');
@@ -123,6 +129,13 @@ export function SignIn() {
           <Button type="submit" className="mt-6" fullWidth>
             Sign In
           </Button>
+
+          {/* Alert Message */}
+      {showAlert && (
+        <div className="alert shadow-blue-500/40 hover:shadow-indigo-500/40 mt-6 content-center text-black text-center bg-green-300  rounded-lg">
+          {alertMessage}
+        </div>
+      )}
 
           {/* <div className="flex items-center justify-between gap-2 mt-6">
             <Checkbox
