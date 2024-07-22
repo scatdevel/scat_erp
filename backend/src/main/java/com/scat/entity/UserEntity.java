@@ -2,44 +2,33 @@ package com.scat.entity;
 
 import java.io.Serializable;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.*;
 
-@Entity(name = "users")
-public class UserEntity implements Serializable
-{
+@Entity
+@Table(name = "users")
+public class UserEntity implements Serializable {
+   
 	private static final long serialVersionUID = 1L;
 
 	@Id
-	@GeneratedValue
-	private long id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
 
-	
-
-	
-    @Column(nullable = false)
     private String username;
+    private String email;
+    private String encryptedPassword;
 
+    public long getId() {
+        return id;
+    }
 
-	@Column(nullable = false, unique= true)
-	private String email;
+    public void setId(long id) {
+        this.id = id;
+    }
+    
+    
 
-	@Column(nullable = false)
-	private String encryptedPassword;
-
-	public long getId() {
-		return id;
-	}
-
-	public void setId(long id) {
-		this.id = id;
-	}
-
-	
-
-	public String getUsername() {
+    public String getUsername() {
 		return username;
 	}
 
@@ -48,23 +37,18 @@ public class UserEntity implements Serializable
 	}
 
 	public String getEmail() {
-		return email;
-	}
+        return email;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-	public String getEncryptedPassword() {
-		return encryptedPassword;
-	}
+    public String getEncryptedPassword() {
+        return encryptedPassword;
+    }
 
-	public void setEncryptedPassword(String encryptedPassword) {
-		this.encryptedPassword = encryptedPassword;
-	}
-
-	
-
-
-
+    public void setEncryptedPassword(String encryptedPassword) {
+        this.encryptedPassword = encryptedPassword;
+    }
 }

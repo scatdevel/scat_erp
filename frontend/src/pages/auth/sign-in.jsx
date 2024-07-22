@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
-import { loginUser } from '../../api';
-import {
-  Card,
-  Input,
-  Checkbox,
-  Button,
-  Typography, 
-  
-} from "@material-tailwind/react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { loginUser } from '../../components/api'; // Importing API function to handle login
+import { Input, Checkbox, Button, Typography } from "@material-tailwind/react"; // Material-UI components
+import { Link, useNavigate } from "react-router-dom"; // React Router for navigation
 
 export function SignIn() {
-  const [alertMessage, setAlertMessage] = useState('');
-  const [showAlert, setShowAlert] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
+
+  const [alertMessage, setAlertMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [error, setError] = useState(null);
+  const [agree, setAgree] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  
+  const navigate = useNavigate();
+
+  const isValid = formData.email.length > 0 && formData.password.length > 0 && agree;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,37 +25,75 @@ export function SignIn() {
       ...prevData,
       [name]: value
     }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-
-    // if (username === '' || password === '') {
-    //   setError('Username and password are required.');
-    // } else {
-    //   setError('');
-    //   // Add your sign-in logic here
-    // }
-
-
-
-
-    try {
-      const response = await loginUser(formData);
-
-
-    setAlertMessage('Login successful!');
-    setShowAlert(true);
-
-      console.log(response);
-      alert('Login successful');
-      // Redirect to another page or take another appropriate action
-    } catch (err) {
-      setError(err.message);
+    
+    if (name === 'email') {
+      if (!validateEmail(value)) {
+        setEmailError('Please enter a valid email.');
+      } else {
+        setEmailError('');
+      }
     }
   };
 
+  const handleAgreeChange = () => {
+    setAgree(!agree);
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  useEffect(() => {
+    if (formData.email && !validateEmail(formData.email)) {
+      setEmailError('Please enter a valid email.');
+    } else {
+      setEmailError('');
+    }
+  }, [formData.email]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    if (!validateEmail(formData.email)) {
+      setEmailError('Please enter a valid email.');
+      setError(null);
+      setAlertMessage('');
+      setShowAlert(true); // Show alert for email error
+      return;
+    }
+  
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      setEmailError('');
+      setAlertMessage('');
+      setShowAlert(true); // Show alert for password error
+      return;
+    }
+  
+    try {
+      const response = await loginUser(formData);
+      if (response) {
+        setAlertMessage('Login successful!');
+        setError(null);
+        setEmailError('');
+        setShowAlert(true); // Show success message
+
+
+        setTimeout(() => {
+          navigate('/dashboard/home'); // Redirect to dashboard
+        }, 1000); 
+      } else {
+        throw new Error('Invalid email or password.');
+      }
+    } catch (err) {
+      setError('Invalid email or password.');
+      setEmailError('');
+      setAlertMessage('');
+      setShowAlert(true); // Show error message
+      console.log(err);
+    }
+  };
   return (
     <section className="m-8 flex gap-4">
       <div className="w-full lg:w-3/5 mt-24">
@@ -71,10 +109,9 @@ export function SignIn() {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 mb-2 mx-auto w-80 max-w-screen-lg lg:w-1/2">
-          {error && <Typography variant="small" color="red" className="mb-4">{error}</Typography>}
-          <div className="mb-1 flex flex-col gap-6">
+          <div className="mb-1 flex flex-col gap-4">
             <Typography variant="small" color="blue-gray" className="-mb-3 font-medium">
-              Your Email
+              Email
             </Typography>
             <Input
               size="lg"
@@ -83,11 +120,13 @@ export function SignIn() {
               labelProps={{
                 className: "before:content-none after:content-none",
               }}
-              name="username"
-              value={formData.username}
+              name="email"
+              value={formData.email}
               onChange={handleChange}
               required
+              type="email" // Ensure email input type
             />
+            {emailError && <Typography variant="small" color="red">{emailError}</Typography>}
             <Typography variant="small" color="blue-gray" className="-mb-3 font-medium">
               Password
             </Typography>
@@ -106,6 +145,8 @@ export function SignIn() {
             />
           </div>
           <Checkbox
+            checked={agree}
+            onChange={handleAgreeChange}
             label={
               <Typography
                 variant="small"
@@ -124,20 +165,21 @@ export function SignIn() {
             containerProps={{ className: "-ml-2.5" }}
           />
 
-      {error && <ErrorBlock message={error} />}
+          {error && <Typography variant="small" color="red" className="mb-4">{error}</Typography>}
 
-          <Button type="submit" className="mt-6" fullWidth>
+          <Button type="submit" disabled={!isValid} className="mt-6" fullWidth>
             Sign In
           </Button>
 
-          {/* Alert Message */}
-      {showAlert && (
-        <div className="alert shadow-blue-500/40 hover:shadow-indigo-500/40 mt-6 content-center text-black text-center bg-green-300  rounded-lg">
-          {alertMessage}
-        </div>
-      )}
+          {showAlert && (
+  <div className={`alert shadow-blue-500/40 hover:shadow-indigo-500/40 mt-6 content-center text-black text-center rounded-lg ${error ? 'bg-red-300' : 'bg-green-300'}`}>
+    {error || alertMessage}
+  </div>
+)}
 
-        
+
+         
+
           <Typography variant="paragraph" className="text-center text-blue-gray-500 font-medium mt-4">
             Not registered?
             <Link to="/auth/sign-up" className="text-gray-900 ml-1">Create account</Link>
@@ -146,7 +188,7 @@ export function SignIn() {
       </div>
       <div className="w-2/5 h-full hidden lg:block">
         <img
-          src="/img/farmer.png"
+          src="/img/Farmer3.jpeg"
           className="h-full w-full object-cover rounded-3xl"
           alt="Pattern"
         />
