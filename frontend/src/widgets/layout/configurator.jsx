@@ -39,6 +39,13 @@ export function Configurator() {
       .then((data) => setStars(formatNumber(data.stargazers_count, 1)));
   }, []);
 
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem('authToken'); // Remove the token from local storage
+    localStorage.removeItem('tokenExpiration'); // Remove expiration time
+    window.location.href = '/auth/sign-in'; // Redirect to the login page
+  };
+
   return (
     <aside
       className={`fixed top-0 right-0 z-50 h-screen w-96 bg-white px-2.5 shadow-lg transition-transform duration-300 ${
@@ -85,6 +92,7 @@ export function Configurator() {
               variant="gradient"
               className="flex justify-center gap-2"
               fullWidth
+              onClick={handleLogout} // Added logout handler
             >
               <FontAwesomeIcon icon={faRightFromBracket} className="text-white" />
               Log Out

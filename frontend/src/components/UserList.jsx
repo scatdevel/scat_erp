@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAllUsers } from './api'; // Adjust this path if api.js is in a different directory
+import { getAllUsers } from './api'; 
 
 const UserList = () => {
     const [users, setUsers] = useState([]);

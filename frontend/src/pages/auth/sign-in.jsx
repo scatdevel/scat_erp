@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { loginUser } from '../../components/api'; // Importing API function to handle login
-import { Input, Checkbox, Button, Typography } from "@material-tailwind/react"; // Material-UI components
-import { Link, useNavigate } from "react-router-dom"; // React Router for navigation
+import { loginUser } from '../../components/api';
+import { Input, Checkbox, Button, Typography } from "@material-tailwind/react";
+import { Link, useNavigate } from "react-router-dom";
 
 export function SignIn() {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
-
   const [alertMessage, setAlertMessage] = useState('');
   const [emailError, setEmailError] = useState('');
   const [error, setError] = useState(null);
   const [agree, setAgree] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
-  
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const authToken = localStorage.getItem('authToken');
+    const tokenExpiration = localStorage.getItem('tokenExpiration');
+    const currentTime = new Date().getTime();
+    if (authToken && tokenExpiration && currentTime < tokenExpiration) {
+      navigate('/dashboard/home');
+    }
+  }, [navigate]);
 
   const isValid = formData.email.length > 0 && formData.password.length > 0 && agree;
 
@@ -25,7 +33,7 @@ export function SignIn() {
       ...prevData,
       [name]: value
     }));
-    
+
     if (name === 'email') {
       if (!validateEmail(value)) {
         setEmailError('Please enter a valid email.');
@@ -51,7 +59,6 @@ export function SignIn() {
       setEmailError('');
     }
   }, [formData.email]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
   
@@ -59,7 +66,7 @@ export function SignIn() {
       setEmailError('Please enter a valid email.');
       setError(null);
       setAlertMessage('');
-      setShowAlert(true); // Show alert for email error
+      setShowAlert(true);
       return;
     }
   
@@ -67,33 +74,41 @@ export function SignIn() {
       setError('Password must be at least 6 characters long.');
       setEmailError('');
       setAlertMessage('');
-      setShowAlert(true); // Show alert for password error
+      setShowAlert(true);
       return;
     }
   
     try {
-      const response = await loginUser(formData);
-      if (response) {
-        setAlertMessage('Login successful!');
-        setError(null);
-        setEmailError('');
-        setShowAlert(true); // Show success message
-
-
-        setTimeout(() => {
-          navigate('/dashboard/home'); // Redirect to dashboard
-        }, 1000); 
-      } else {
-        throw new Error('Invalid email or password.');
-      }
+      console.log('Submitting form with data:', formData);
+      const token = await loginUser(formData);
+      console.log('Login successful, received token:', token);
+  
+      const expirationTime = new Date().getTime() + (60 * 60 * 1000); // Token valid for 1 hour
+      localStorage.setItem('authToken', token); // Store the token
+      localStorage.setItem('tokenExpiration', expirationTime); // Store expiration time
+  
+      setAlertMessage('Login successful!');
+      setError(null);
+      setEmailError('');
+      setShowAlert(true);
+  
+      setTimeout(() => {
+        navigate('/dashboard/home');
+      }, 1000);
     } catch (err) {
-      setError('Invalid email or password.');
+      console.error('Login error:', err);
+      if (err.response && err.response.status === 401) {
+        setError('Invalid email or password.');
+      } else {
+        setError('An error occurred. Please try again later.');
+      }
       setEmailError('');
       setAlertMessage('');
-      setShowAlert(true); // Show error message
-      console.log(err);
+      setShowAlert(true);
     }
   };
+  
+
   return (
     <section className="m-8 flex gap-4">
       <div className="w-full lg:w-3/5 mt-24">
@@ -124,7 +139,7 @@ export function SignIn() {
               value={formData.email}
               onChange={handleChange}
               required
-              type="email" // Ensure email input type
+              type="email"
             />
             {emailError && <Typography variant="small" color="red">{emailError}</Typography>}
             <Typography variant="small" color="blue-gray" className="-mb-3 font-medium">
@@ -172,13 +187,10 @@ export function SignIn() {
           </Button>
 
           {showAlert && (
-  <div className={`alert shadow-blue-500/40 hover:shadow-indigo-500/40 mt-6 content-center text-black text-center rounded-lg ${error ? 'bg-red-300' : 'bg-green-300'}`}>
-    {error || alertMessage}
-  </div>
-)}
-
-
-         
+            <div className={`alert shadow-blue-500/40 hover:shadow-indigo-500/40 mt-6 content-center text-black text-center rounded-lg ${error ? 'bg-red-300' : 'bg-green-300'}`}>
+              {error || alertMessage}
+            </div>
+          )}
 
           <Typography variant="paragraph" className="text-center text-blue-gray-500 font-medium mt-4">
             Not registered?

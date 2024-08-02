@@ -32,20 +32,23 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     @Override
     public Authentication attemptAuthentication(HttpServletRequest req, HttpServletResponse res) throws AuthenticationException {
         try {
+            // Read credentials from request body
             UserLoginRequestModel creds = new ObjectMapper().readValue(req.getInputStream(), UserLoginRequestModel.class);
             return authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            creds.getEmail(),
+                            creds.getEmail(),  // Ensure this matches the field in your JSON payload
                             creds.getPassword(),
                             new ArrayList<>())
             );
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            // Log error and rethrow as runtime exception
+            throw new RuntimeException("Failed to parse authentication request", e);
         }
     }
 
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest req, HttpServletResponse res, AuthenticationException failed) throws IOException, ServletException {
+        // Set response status and content
         res.setStatus(HttpStatus.UNAUTHORIZED.value());
         res.setContentType("application/json");
         res.getWriter().write("{\"error\": \"Invalid username or password\"}");
@@ -58,12 +61,14 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
         String userName = ((User) auth.getPrincipal()).getUsername();
 
+        // Generate JWT token
         String token = Jwts.builder()
                 .setSubject(userName)
                 .setExpiration(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME))
                 .signWith(SignatureAlgorithm.HS512, SecurityConstants.getTokenSecret())
                 .compact();
 
+        // Add token to response header and body
         res.addHeader(SecurityConstants.HEADER_STRING, SecurityConstants.TOKEN_PREFIX + token);
         res.setContentType("application/json");
         res.getWriter().write("{\"token\":\"" + token + "\"}");

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { Card, CardBody, Typography } from "@material-tailwind/react";
 import { HomeIcon } from "@heroicons/react/24/solid";
 import { Box, TextField, Button as MUIButton, Avatar as MUIAvatar } from "@mui/material";
@@ -34,35 +34,14 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-const PhotoUpload = ({ username }) => {
+const PhotoUpload = ({ onFileChange, previewUrl }) => {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [preview, setPreview] = useState(null);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       setSelectedFile(file);
-      setPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!selectedFile) return;
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
-    try {
-      const response = await axios.post(`/users/upload/profile-picture/${username}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      console.log('File uploaded successfully:', response.data);
-      setPreview(response.data.profilePictureUrl);
-    } catch (error) {
-      console.error('Error uploading file:', error);
+      onFileChange(file);
     }
   };
 
@@ -70,48 +49,23 @@ const PhotoUpload = ({ username }) => {
     <Box className="p-4 flex flex-col items-center">
       <Typography variant="h6" className="mb-4 text-center">Your Photo</Typography>
       <Box className="flex items-center justify-center my-4">
-        {preview ? (
-          <MUIAvatar
-            src={preview}
-            className="mr-4"
-            sx={{ width: 100, height: 100 }}
-          />
-        ) : (
-          <MUIAvatar
-            src="https://via.placeholder.com/150"
-            className="mr-4"
-            sx={{ width: 100, height: 100 }}
-          />
-        )}
+        <MUIAvatar
+          src={previewUrl || "https://via.placeholder.com/150"}
+          className="mr-4"
+          sx={{ width: 100, height: 100 }}
+        />
       </Box>
       <Box className="flex space-x-2 mb-4">
-        <MUIButton variant="outlined" color="primary" onClick={() => setPreview(null)}>Delete</MUIButton>
+        <MUIButton variant="outlined" color="primary" onClick={() => onFileChange(null)}>Delete</MUIButton>
         <MUIButton variant="contained" color="primary" onClick={() => document.getElementById('fileInput').click()}>Update</MUIButton>
       </Box>
-      <form onSubmit={handleSubmit} className="w-full flex justify-between">
-        <input
-          id="fileInput"
-          type="file"
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-          accept=".svg, .png, .jpg, .gif"
-        />
-        <Box
-          className="border-dashed border-2 p-2 text-center cursor-pointer flex-1 mr-2"
-          onClick={() => document.getElementById('fileInput').click()}
-        >
-          <Typography variant="body1">Click to upload or drag and drop</Typography>
-          <Typography variant="body2">SVG, PNG, JPG or GIF (max, 800 X 800px)</Typography>
-        </Box>
-        <MUIButton 
-          type="submit" 
-          variant="contained" 
-          color="primary" 
-          sx={{ padding: '4px 6px', fontSize: '0.75rem', minWidth: '80px', height: '40px' }}
-        >
-          Save
-        </MUIButton>
-      </form>
+      <input
+        id="fileInput"
+        type="file"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+        accept=".svg, .png, .jpg, .gif"
+      />
     </Box>
   );
 };
@@ -123,10 +77,38 @@ export function Profile() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
+  const [alert, setAlert] = useState({ message: '', type: '' });
+  const [emailError, setEmailError] = useState('');
+  const [phoneNumberError, setPhoneNumberError] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+
+  const isValidPhoneNumber = (number) => /^[0-9]{10}$/.test(number);
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSave = async () => {
+    let hasError = false;
+
+    if (!username) {
+      setAlert({ message: 'Username is required', type: 'error' });
+      hasError = true;
+    }
+    if (!isValidPhoneNumber(phoneNumber)) {
+      setPhoneNumberError('Please enter a valid phone number (10 digits)');
+      hasError = true;
+    } else {
+      setPhoneNumberError('');
+    }
+    if (!isValidEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      hasError = true;
+    } else {
+      setEmailError('');
+    }
+
+    if (hasError) return;
+
     try {
-      // Construct the user data object
       const userData = {
         fullName,
         phoneNumber,
@@ -135,17 +117,38 @@ export function Profile() {
         bio
       };
 
-      // Send a POST request to save user information
-      const response = await axios.post('/api/user/update', userData);
-      
-      // Handle success
-      console.log('User information saved successfully:', response.data);
-      // Optionally, update state or perform other actions on success
+      await axios.put(`http://localhost:8080/users/${username}`, userData, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('username', username);
+
+        const token = localStorage.getItem('token');
+        const uploadUrl = `http://localhost:8080/users/uploadProfilePicture`;
+
+        const headers = {
+          'Content-Type': 'multipart/form-data',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        };
+
+        await axios.post(uploadUrl, formData, { headers });
+        setAlert({ message: 'Profile updated and photo uploaded successfully', type: 'success' });
+      } else {
+        setAlert({ message: 'Profile updated successfully', type: 'success' });
+      }
     } catch (error) {
-      // Handle error
-      console.error('Error saving user information:', error);
-      // Optionally, display an error message or perform other error handling actions
+      if (error.response) {
+        setAlert({ message: `Error: ${error.response.data.message || 'Error saving profile'}`, type: 'error' });
+      } else if (error.request) {
+        setAlert({ message: 'Error: No response received from server', type: 'error' });
+      } else {
+        setAlert({ message: 'Error: Request failed', type: 'error' });
+      }
     }
   };
 
@@ -155,7 +158,22 @@ export function Profile() {
     setEmail('');
     setUsername('');
     setBio('');
+    setAlert({ message: '', type: '' });
+    setEmailError('');
+    setPhoneNumberError('');
+    setSelectedFile(null);
+    setPreviewUrl(null);
   };
+
+  useEffect(() => {
+    if (alert.message) {
+      const timer = setTimeout(() => {
+        setAlert({ message: '', type: '' });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [alert]);
 
   return (
     <>
@@ -172,17 +190,25 @@ export function Profile() {
               <Typography variant="h6" className="inline-block">App</Typography>
             </div>
           </div>
-          <PhotoUpload username={username} />
+          <PhotoUpload onFileChange={(file) => {
+            setSelectedFile(file);
+            setPreviewUrl(file ? URL.createObjectURL(file) : null);
+          }} previewUrl={previewUrl} />
         </CardBody>
       </Card>
       <Box className="p-2">
         <Typography variant="h5" className="mb-6">Settings Page</Typography>
+        {alert.message && (
+          <div className={`alert ${alert.type === 'success' ? 'alert-success' : 'alert-error'}`}>
+            <Typography variant="body1" color={alert.type === 'success' ? 'green' : 'red'}>
+              {alert.message}
+            </Typography>
+          </div>
+        )}
         <Box className="mb-4">
           <Typography variant="h6" className="mb-2">Personal Information</Typography>
           <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-
-          <TextField
+            <TextField
               fullWidth
               label="Username"
               variant="outlined"
@@ -220,10 +246,12 @@ export function Profile() {
                   input: classes.input,
                 },
               }}
+              error={!!phoneNumberError}
+              helperText={phoneNumberError}
             />
             <TextField
               fullWidth
-              label="Email Address"
+              label="Email"
               variant="outlined"
               className="my-2"
               value={email}
@@ -233,34 +261,32 @@ export function Profile() {
                   input: classes.input,
                 },
               }}
+              error={!!emailError}
+              helperText={emailError}
             />
-           
           </Box>
-
-          <div>
-            <Typography variant="h6" className="mb-2">Bio</Typography>
-            <TextField
-              fullWidth
-              label="Bio"
-              variant="outlined"
-              multiline
-              rows={4}
-              className="my-2"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              InputProps={{
-                classes: {
-                  input: classes.input,
-                },
-              }}
-              placeholder="Write your bio here"
-            />
-          </div>
-
-          <Box className="flex justify-end mt-6">
-            <MUIButton variant="contained" color="primary" className="mr-2" onClick={handleSave}>Save</MUIButton>
-            <MUIButton variant="outlined" color="secondary" onClick={handleCancel}>Cancel</MUIButton>
-          </Box>
+        </Box>
+        <Box className="mb-4">
+          <Typography variant="h6" className="mb-2">About Me</Typography>
+          <TextField
+            fullWidth
+            label="Bio"
+            multiline
+            rows={4}
+            variant="outlined"
+            className="my-2"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            InputProps={{
+              classes: {
+                input: classes.input,
+              },
+            }}
+          />
+        </Box>
+        <Box className="flex justify-end space-x-4">
+          <MUIButton variant="outlined" color="primary" onClick={handleCancel}>Cancel</MUIButton>
+          <MUIButton variant="contained" color="primary" onClick={handleSave}>Save</MUIButton>
         </Box>
       </Box>
     </>

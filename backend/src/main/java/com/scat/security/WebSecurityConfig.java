@@ -1,3 +1,4 @@
+
 package com.scat.security;
 
 import com.scat.service.UserService;
@@ -12,12 +13,14 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final UserService userService;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    
 
     @Autowired
     public WebSecurityConfig(@Lazy UserService userService, @Lazy BCryptPasswordEncoder bCryptPasswordEncoder) {
@@ -31,12 +34,16 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
             .cors().and().csrf().disable()
             .authorizeRequests()
                 .antMatchers(SecurityConstants.SIGNUP_URL, SecurityConstants.LOGIN_URL).permitAll()
-                .antMatchers("/users/get").authenticated()
-                .anyRequest().authenticated()
+               // .antMatchers("/users/upload/profile-picture/**").permitAll() // Allow access to profile picture upload
+       //.anyRequest().authenticated()
+                
                 .and()
             .addFilter(new AuthenticationFilter(authenticationManager()))
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
     }
+    
+    
+
 
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
@@ -48,3 +55,5 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder();
     }
 }
+
+

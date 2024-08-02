@@ -18,7 +18,7 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
     public AuthorizationFilter(AuthenticationManager authManager) {
         super(authManager);
     }
-
+    
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
         String header = req.getHeader(SecurityConstants.HEADER_STRING);
@@ -30,7 +30,10 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
 
         UsernamePasswordAuthenticationToken authentication = getAuthentication(req);
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (authentication != null) {
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+
         chain.doFilter(req, res);
     }
 
@@ -50,4 +53,7 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
         }
         return null;
     }
+
 }
+
+

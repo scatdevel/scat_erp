@@ -36,6 +36,7 @@ export const getAllUsers = async () => {
     }
   };
 
+
   export const loginUser = async (credentials) => {
     try {
       const response = await axios.post(`${API_URL}/login`, credentials, {
@@ -44,9 +45,15 @@ export const getAllUsers = async () => {
         },
         withCredentials: true,
       });
-      const token = response.data.token; // Make sure this matches the response structure
-      localStorage.setItem('jwtToken', token);
-      return token;
+  
+      // Check if the response contains the token
+      if (response.data && response.data.token) {
+        const token = response.data.token;
+        localStorage.setItem('jwtToken', token);
+        return token;
+      } else {
+        throw new Error('Token not found in the response');
+      }
     } catch (error) {
       if (error.response) {
         console.error(`Login error: ${error.response.status} - ${error.response.data.message}`);

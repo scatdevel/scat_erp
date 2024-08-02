@@ -1,6 +1,5 @@
 package com.scat.service.impl;
-
-import org.springframework.beans.BeanUtils;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,71 +19,107 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @Autowired
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
-
-    @Autowired
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository, ModelMapper modelMapper, BCryptPasswordEncoder bCryptPasswordEncoder) {
         this.userRepository = userRepository;
+        this.modelMapper = modelMapper;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
     @Override
-    public UserDTO createUser(UserDTO user) {
-        if (userRepository.findByEmail(user.getEmail()) != null) {
-            throw new RuntimeException("Record already exists");
+    public UserDTO createUser(UserDTO userDTO) {
+        if (userRepository.findByEmail(userDTO.getEmail()) != null) {
+            throw new RuntimeException("Email already in use");
         }
 
-        UserEntity userEntity = new UserEntity();
-        BeanUtils.copyProperties(user, userEntity);
-
-        userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-
+        UserEntity userEntity = modelMapper.map(userDTO, UserEntity.class);
+        userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(userDTO.getPassword()));
         UserEntity storedUserDetails = userRepository.save(userEntity);
 
-        UserDTO returnValue = new UserDTO();
-        BeanUtils.copyProperties(storedUserDetails, returnValue);
-
-        return returnValue;
+        return modelMapper.map(storedUserDetails, UserDTO.class);
     }
 
     @Override
-    public UserDTO getUser(String email) {
-        UserEntity userEntity = userRepository.findByEmail(email);
-
+    public UserDTO getUser(String emailOrUsername) {
+        UserEntity userEntity = userRepository.findByEmail(emailOrUsername);
         if (userEntity == null) {
-            throw new UsernameNotFoundException(email);
+            userEntity = userRepository.findByUsername(emailOrUsername);
+        }
+        if (userEntity == null) {
+            throw new UsernameNotFoundException("User not found with identifier: " + emailOrUsername);
         }
 
-        UserDTO returnValue = new UserDTO();
-        BeanUtils.copyProperties(userEntity, returnValue);
+        return modelMapper.map(userEntity, UserDTO.class);
+    }
 
-        return returnValue;
+    @Override
+    public UserDTO getUserByUsername(String username) {
+        UserEntity userEntity = userRepository.findByUsername(username);
+        if (userEntity == null) {
+            throw new UsernameNotFoundException("User not found with username: " + username);
+        }
+
+        return modelMapper.map(userEntity, UserDTO.class);
+    }
+
+    @Override
+    public UserDTO updateUser(UserDTO userDTO) {
+        UserEntity userEntity = userRepository.findByUsername(userDTO.getUsername());
+        if (userEntity == null) {
+            throw new UsernameNotFoundException("User not found with username: " + userDTO.getUsername());
+        }
+
+        userEntity.setFullName(userDTO.getFullName());
+        userEntity.setPhoneNumber(userDTO.getPhoneNumber());
+        userEntity.setEmail(userDTO.getEmail());
+        userEntity.setBio(userDTO.getBio());
+        if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
+            userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(userDTO.getPassword()));
+        }
+        userEntity.setProfilePictureUrl(userDTO.getProfilePictureUrl());
+
+        UserEntity updatedUserEntity = userRepository.save(userEntity);
+        return modelMapper.map(updatedUserEntity, UserDTO.class);
+    }
+
+    @Override
+    public List<UserDTO> getAllUsers() {
+        List<UserEntity> users = userRepository.findAll();
+        List<UserDTO> userDTOs = new ArrayList<>();
+
+        for (UserEntity userEntity : users) {
+            UserDTO userDTO = modelMapper.map(userEntity, UserDTO.class);
+            userDTOs.add(userDTO);
+        }
+
+        return userDTOs;
     }
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         UserEntity userEntity = userRepository.findByEmail(email);
-
         if (userEntity == null) {
-            throw new UsernameNotFoundException(email);
+            throw new UsernameNotFoundException("User not found with email: " + email);
         }
 
         return new User(userEntity.getEmail(), userEntity.getEncryptedPassword(), new ArrayList<>());
     }
 
-    
     @Override
-    public List<UserDTO> getAllUsers() {
-        Iterable<UserEntity> users = userRepository.findAll();
-        List<UserDTO> userDTOs = new ArrayList<>();
-        
-        for (UserEntity userEntity : users) {
-            UserDTO userDTO = new UserDTO();
-            BeanUtils.copyProperties(userEntity, userDTO);
-            userDTOs.add(userDTO);
+    public UserDTO updateProfilePicture(String emailOrUsername, String profilePictureUrl) {
+        UserEntity userEntity = userRepository.findByEmail(emailOrUsername);
+        if (userEntity == null) {
+            userEntity = userRepository.findByUsername(emailOrUsername);
         }
-        
-        return userDTOs;
+        if (userEntity == null) {
+            throw new UsernameNotFoundException("User not found with identifier: " + emailOrUsername);
+        }
+
+        userEntity.setProfilePictureUrl(profilePictureUrl);
+        UserEntity updatedUserEntity = userRepository.save(userEntity);
+        return modelMapper.map(updatedUserEntity, UserDTO.class);
     }
 }
