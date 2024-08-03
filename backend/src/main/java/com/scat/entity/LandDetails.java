@@ -20,9 +20,18 @@ public class LandDetails {
     private String pincode;
     private String state;
     private String address;
-    private String locateonmap; // New field
+    private String locateonmap;
+    private String street;
 
-    // Getters and Setters
+    public String getStreet() {
+		return street;
+	}
+
+	public void setStreet(String street) {
+		this.street = street;
+	}
+
+	// Getters and Setters
     public Long getId() {
         return id;
     }
