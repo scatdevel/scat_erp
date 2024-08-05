@@ -9,6 +9,46 @@ const SettingsPage = () => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
+  
+  // useEffect(() => {
+  //   if (window.google) {
+  //     const map = new window.google.maps.Map(mapRef.current, {
+  //       center: { lat: -34.397, lng: 150.644 },
+  //       zoom: 8,
+  //     });
+
+  //     const autocomplete = new window.google.maps.places.Autocomplete(
+  //       document.getElementById('address'),
+  //       {
+  //         types: ['geocode'],
+  //       }
+  //     );
+  //     autocompleteRef.current = autocomplete;
+
+  //     autocomplete.addListener('place_changed', () => {
+  //       const place = autocomplete.getPlace();
+  //       if (place.geometry) {
+  //         const addressComponents = place.address_components;
+  //         const address = {
+  //           street: addressComponents.find(ac => ac.types.includes('route'))?.long_name || '',
+  //           village: addressComponents.find(ac => ac.types.includes('locality'))?.long_name || '',
+  //           district: addressComponents.find(ac => ac.types.includes('administrative_area_level_2'))?.long_name || '',
+  //           state: addressComponents.find(ac => ac.types.includes('administrative_area_level_1'))?.long_name || '',
+  //           pincode: addressComponents.find(ac => ac.types.includes('postal_code'))?.long_name || '',
+  //           locateonmap: place.formatted_address || '',
+  //         };
+
+  //         setFormData({
+  //           ...formData,
+  //           ...address,
+  //           locateonmap: place.formatted_address || '',
+  //         });
+          
+         
+  //       }
+  //     });
+  //   }
+  // }, []);
 
   const handleSave = () => {
     // Handle the save action
